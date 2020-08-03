@@ -109,11 +109,13 @@ def repol_plot(repol, repolfitdata):
     layout = go.Layout(
         xaxis=dict(title='B-Field(G)',
             mirror=True,
+            range=[-1500,1500],
             ticks='outside',
             showline=True,
             linecolor='rgb(0,0,0)'),
         yaxis=dict(title='Asymmetry',
             mirror=True,
+            range=[0,0.2],
             ticks='outside',
             showline=True,
             linecolor='rgb(0,0,0)'),
@@ -194,85 +196,141 @@ def lam_plot(repol, repolfitdata):
 
 def asym_plots(df, run, df2, plots):    
     hovertemp ='<B>Time(us)</B>: %{x}'+'<br><b>Asymmetry</b>: %{y}<extra></extra>'
+    try:
+        trace1e = go.Scatter(
+            name='Laser Off',
+            x=df['Time'],
+            y=df['Laser Off'],
+            hovertemplate=hovertemp,
+            mode='lines',
+            line=dict(color='rgb(31, 119, 255)'),
+            error_y=dict(
+                type='data',
+                array=df['Laser Off Err'],
+                visible=True,
+                color='darkgray',
+                thickness=1))
+        
+        trace2e = go.Scatter(
+            name='Laser On',
+            x=df['Time'],
+            y=df['Laser On'],
+            hovertemplate=hovertemp,        
+            mode='lines',
+            line=dict(color='rgb(0, 255, 35)'),
+            error_y=dict(
+                type='data',
+                array=df['Laser On Err'],
+                visible=True,
+                color='darkgray',
+                thickness=1))
+        
+        trace1 = go.Scatter(
+            name='Laser Off',
+            x=df['Time'],
+            y=df['Laser Off'],
+            hovertemplate=hovertemp,        
+            mode='lines',
+            line=dict(color='rgb(31, 119, 180)'))
+        
+        trace2 = go.Scatter(
+            name='Laser On',
+            x=df['Time'],
+            y=df['Laser On'],
+            hovertemplate=hovertemp,        
+            mode='lines',
+            line=dict(color='rgb(0, 255, 35)'))
     
-    trace1e = go.Scatter(
-        name='Laser Off',
-        x=df['Time'],
-        y=df['Laser Off'],
-        hovertemplate=hovertemp,
-        mode='lines',
-        line=dict(color='rgb(31, 119, 255)'),
-        error_y=dict(
-            type='data',
-            array=df['Laser Off Err'],
-            visible=True,
-            color='darkgray',
-            thickness=1))
+        trace3 = go.Scatter(
+            name='Laser Off Fit',
+            x=df['Time'],
+            y=loff_func(df['Time'],*[df2.loc[run]['Loff A'], df2.loc[run]['Loff B'], df2.loc[run]['Loff g']]),
+            hovertemplate=hovertemp,        
+            mode='lines',
+            line=dict(color='rgb(255, 0, 0)'))
     
-    trace2e = go.Scatter(
-        name='Laser On',
-        x=df['Time'],
-        y=df['Laser On'],
-        hovertemplate=hovertemp,        
-        mode='lines',
-        line=dict(color='rgb(0, 255, 35)'),
-        error_y=dict(
-            type='data',
-            array=df['Laser On Err'],
-            visible=True,
-            color='darkgray',
-            thickness=1))
+        data = []
+        if len(plots) == 0:
+            data = [trace1]
+        elif len(plots) == 1:
+            if plots == ['LOF']:
+                data = [trace1, trace3]
+            elif plots == ['LOE']:
+                data = [trace1, trace2]
+            elif plots == ['EB']:
+                data = [trace1e]
+        elif len(plots) == 2:
+            if plots == ['LOF', 'LOE']:
+                data = [trace1, trace2, trace3]
+            if plots == ['LOE', 'LOF']:
+                data = [trace1, trace2, trace3]
+            elif plots == ['LOF', 'EB']:
+                data = [trace1e, trace3]
+            elif plots == ['EB', 'LOF']:
+                data = [trace1e, trace3]            
+            elif plots == ['LOE', 'EB']:
+                data = [trace1e, trace2e]
+            elif plots == ['EB', 'LOE']:
+                data = [trace1e, trace2e]            
+        elif len(plots) == 3:
+            data = [trace1e, trace2e, trace3]
+    except:
+        trace1e = go.Scatter(
+            name='Laser Off',
+            x=df['Time'],
+            y=df['Laser Off'],
+            hovertemplate=hovertemp,
+            mode='lines',
+            line=dict(color='rgb(31, 119, 255)'),
+            error_y=dict(
+                type='data',
+                array=df['Laser Off Err'],
+                visible=True,
+                color='darkgray',
+                thickness=1))
+        
+        trace1 = go.Scatter(
+            name='Laser Off',
+            x=df['Time'],
+            y=df['Laser Off'],
+            hovertemplate=hovertemp,        
+            mode='lines',
+            line=dict(color='rgb(31, 119, 180)'))
     
-    trace1 = go.Scatter(
-        name='Laser Off',
-        x=df['Time'],
-        y=df['Laser Off'],
-        hovertemplate=hovertemp,        
-        mode='lines',
-        line=dict(color='rgb(31, 119, 180)'))
-    
-    trace2 = go.Scatter(
-        name='Laser On',
-        x=df['Time'],
-        y=df['Laser On'],
-        hovertemplate=hovertemp,        
-        mode='lines',
-        line=dict(color='rgb(0, 255, 35)'))
-
-    trace3 = go.Scatter(
-        name='Laser Off Fit',
-        x=df['Time'],
-        y=loff_func(df['Time'],*[df2.loc[run]['Loff A'], df2.loc[run]['Loff B'], df2.loc[run]['Loff g']]),
-        hovertemplate=hovertemp,        
-        mode='lines',
-        line=dict(color='rgb(255, 0, 0)'))
-    
-#The plots array is built by first checked, first written. So, all cases/permutations must be considered
-    data = []
-    if len(plots) == 0:
-        data = [trace1]
-    elif len(plots) == 1:
-        if plots == ['LOF']:
-            data = [trace1, trace3]
-        elif plots == ['LOE']:
-            data = [trace1, trace2]
-        elif plots == ['EB']:
-            data = [trace1e]
-    elif len(plots) == 2:
-        if plots == ['LOF', 'LOE']:
-            data = [trace1, trace2, trace3]
-        if plots == ['LOE', 'LOF']:
-            data = [trace1, trace2, trace3]
-        elif plots == ['LOF', 'EB']:
+        trace3 = go.Scatter(
+            name='Laser Off Fit',
+            x=df['Time'],
+            y=loff_func(df['Time'],*[df2.loc[run]['Loff A'], df2.loc[run]['Loff B'], df2.loc[run]['Loff g']]),
+            hovertemplate=hovertemp,        
+            mode='lines',
+            line=dict(color='rgb(255, 0, 0)'))   
+        
+        data = []
+        if len(plots) == 0:
+            data = [trace1]
+        elif len(plots) == 1:
+            if plots == ['LOF']:
+                data = [trace1, trace3]
+            elif plots == ['LOE']:
+                data = [trace1, trace2]
+            elif plots == ['EB']:
+                data = [trace1e]
+        elif len(plots) == 2:
+            if plots == ['LOF', 'LOE']:
+                data = [trace1, trace3]
+            if plots == ['LOE', 'LOF']:
+                data = [trace1, trace3]
+            elif plots == ['LOF', 'EB']:
+                data = [trace1e, trace3]
+            elif plots == ['EB', 'LOF']:
+                data = [trace1e, trace3]            
+            elif plots == ['LOE', 'EB']:
+                data = [trace1e]
+            elif plots == ['EB', 'LOE']:
+                data = [trace1e]            
+        elif len(plots) == 3:
             data = [trace1e, trace3]
-        elif plots == ['EB', 'LOF']:
-            data = [trace1e, trace3]            
-        elif plots == ['LOE', 'EB']:
-            data = [trace1e, trace2e]
-        elif plots == ['EB', 'LOE']:
-            data = [trace1e, trace2e]            
-    elif len(plots) == 3:
-        data = [trace1e, trace2e, trace3]
+        
         
 #create layout of plot    
     layout = go.Layout(
@@ -305,78 +363,16 @@ def asym_plots(df, run, df2, plots):
 #Setup data to be displayed
 ###############################################################################
 #setting the directory and grabbing the filenames
-directory="https://raw.githubusercontent.com/inelastic/july-2015-app/master/ProcessedCSV/"
-#directory="E:/Storage/Documents/Python Files/RALAnalysis/July 2015 App/ProcessedCSV/"
-filenames = ['84390',
- '84391',
- '84392',
- '84393',
- '84394',
- '84395',
- '84396',
- '84397',
- '84398',
- '84399',
- '84400',
- '84401',
- '84402',
- '84403',
- '84404',
- '84405',
- '84406',
- '84409',
- '84410',
- '84411',
- '84413',
- '84416',
- '84417',
- '84421',
- '84426',
- '84430',
- '84434',
- '84438',
- '84442',
- '84446',
- '84450',
- '84463',
- '84467',
- '84471',
- '84475',
- '84480',
- '84485',
- '84490',
- '84495',
- '84500',
- '84505',
- '84510',
- '84515',
- '84520',
- '84525',
- '84541',
- '84545',
- '84549',
- '84555',
- '84560',
- '84564',
- '84568',
- '84573',
- '84576',
- '84579',
- '84589',
- '84592',
- '84599',
- '84601',
- '84606',
- '84610',
- '84617',
- '84621',
- '84628',
- '84631',
- '84638',
- '84641',
- '84645',
- '84649']
+#directory="https://raw.githubusercontent.com/inelastic/Dec-2016-app/master/ProcessedCSV/"
+directory="E:/Storage/Documents/Python Files/RALAnalysis/Dec2016/ProcessedCSV/"
+filenames = []
+with open(directory+'listfile.txt', 'r') as filehandle:
+    filenames = [current_place.rstrip() for current_place in filehandle.readlines()]
+for i in range(len(filenames)):
+    filenames[i] = int(filenames[i])
+
 fitdata = pd.read_csv(directory+'fitdata.csv', index_col=0)
+
 #re-indexing fitdata to use in graphs
 
 #set dict to hold data
@@ -386,11 +382,11 @@ Asym = {}
 wavelengths = np.empty(len(filenames), dtype=object) 
 qwppos = np.zeros(len(filenames))
 for i in range(len(filenames)): 
-    temp1 = pd.read_csv(directory+'Sample_Temperature/'+filenames[i]+'.csv', index_col=0)
+    temp1 = pd.read_csv(directory+'Sample_Temperature/'+str(filenames[i])+'.csv', index_col=0)
     temp1['Time']= pd.to_datetime(temp1['Time']) 
     name = fitdata.index[i]
     tempdata[name] = temp1
-    temp2 = pd.read_csv(directory+'Asymmetry/'+filenames[i]+'.csv')
+    temp2 = pd.read_csv(directory+'Asymmetry/'+str(filenames[i])+'.csv')
     try:
         wavelengths[i] = str(temp1['Wavelength'].values[0])
         qwppos[i] = str(temp1['QWP_Pos'].values[0])       
@@ -415,11 +411,11 @@ lam = lam_plot(repolarization, repolfitdata)
 table_header = [
     #html.Thead(html.Tr([html.Th("First Name"), html.Th("Last Name")]))
 ]
-tempave = tempdata[84390]['Temp(K)'].mean()
-tempaverr = tempdata[84390]['Temp(K)'].sem(axis=0)
-row1 = html.Tr([html.Td("# Of Events (Mev)"), html.Td(fitdata.loc[84390]['Raw Events(MeV)'])])
-row2 = html.Tr([html.Td("Signal (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[84390]['Asym Diff'], abs(fitdata.loc[84390]['Asym Diff Err'])))])
-row3 = html.Tr([html.Td("Asym Drop (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[84390]['Power Drop']*100, abs(fitdata.loc[84390]['Power Drop Err']*100)))])
+tempave = tempdata[filenames[0]]['Temp(K)'].mean()
+tempaverr = tempdata[filenames[0]]['Temp(K)'].sem(axis=0)
+row1 = html.Tr([html.Td("# Of Events (Mev)"), html.Td(fitdata.loc[filenames[0]]['Raw Events(MeV)'])])
+row2 = html.Tr([html.Td("Signal (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[filenames[0]]['Asym Diff'], abs(fitdata.loc[filenames[0]]['Asym Diff Err'])))])
+row3 = html.Tr([html.Td("Asym Drop (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[filenames[0]]['Power Drop']*100, abs(fitdata.loc[filenames[0]]['Power Drop Err']*100)))])
 row4 = html.Tr([html.Td("Temp Ave (K)"), html.Td('%5.3f +- %5.5f' %(tempave, tempaverr))])
 table_body = html.Tbody([row1, row2, row3, row4])
 
@@ -438,7 +434,7 @@ server = app.server
 
 #create layout
 app.layout = dbc.Container([
-    html.H1("July 2015 Si Results"),
+    html.H1("Dec 2016 Si Results"),
     dbc.Row(
         [
             dbc.Col(dbc.Card(
@@ -487,7 +483,7 @@ app.layout = dbc.Container([
      Input("plots", 'value')]
 )
 def update_figure(tempdata_value, plots):
-    run = int(tempdata_value[0:5])
+    run = int(tempdata_value[0:6])
     temperdata = tempdata[run]
     asymdata = Asym[run]
     tempfig = temp_plot(temperdata)
@@ -499,7 +495,7 @@ def update_figure(tempdata_value, plots):
     [Input("wavelength-dropdown","value")],    
 )
 def update_table(wavelength):
-    run = int(wavelength[0:5])
+    run = int(wavelength[0:6])
     tempave = tempdata[run]['Temp(K)'].mean()
     tempaverr = tempdata[run]['Temp(K)'].sem(axis=0)
     row1 = html.Tr([html.Td("# Of Events (Mev)"), html.Td(fitdata.loc[run]['Raw Events(MeV)'])])
