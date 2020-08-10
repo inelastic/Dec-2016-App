@@ -3,6 +3,7 @@
 ###############################################################################
 import numpy as np
 import pandas as pd
+import math
 import plotly.graph_objects as go
 import dash
 import dash_core_components as dcc
@@ -50,8 +51,13 @@ def temp_plot(df):
         hoverlabel_align = 'left',
         plot_bgcolor='rgb(255,255,255)',        
         showlegend = True)
-    
-    fig = go.Figure(data=trace1, layout=layout)    
+    if (df['Temp(K)'].mean() > 0):
+        fig = go.Figure(data=trace1, layout=layout)
+        fig.update_layout(
+            title="No Temperature Data Available",
+        )
+    else:
+        fig=  go.Figure(data=[], layout=layout)    
     return fig
     
 #Create asymmetry plots. There are 3 options for display. The figures are added
@@ -158,7 +164,7 @@ def lam_plot(repol, repolfitdata):
         y=repolfitdata['ly'],
         hovertemplate=hovertemp,        
         mode='lines',
-        line=dict(color='rgb(255, 0, 0)'))
+        line=dict(color='rgb(255, 0, 255)'))
     
 
     data = [trace1, trace2]
@@ -196,21 +202,41 @@ def lam_plot(repol, repolfitdata):
 
 def asym_plots(df, run, df2, plots):    
     hovertemp ='<B>Time(us)</B>: %{x}'+'<br><b>Asymmetry</b>: %{y}<extra></extra>'
-    try:
-        trace1e = go.Scatter(
-            name='Laser Off',
-            x=df['Time'],
-            y=df['Laser Off'],
-            hovertemplate=hovertemp,
-            mode='lines',
-            line=dict(color='rgb(31, 119, 255)'),
-            error_y=dict(
-                type='data',
-                array=df['Laser Off Err'],
-                visible=True,
-                color='darkgray',
-                thickness=1))
-        
+    cols = [col for col in df.columns if 'Laser On' in col]
+    
+    trace1e = go.Scatter(
+        name='Laser Off',
+        x=df['Time'],
+        y=df['Laser Off'],
+        hovertemplate=hovertemp,
+        mode='lines',
+        line=dict(color='rgb(31, 119, 255)'),
+        error_y=dict(
+            type='data',
+            array=df['Laser Off Err'],
+            visible=True,
+            color='darkgray',
+            thickness=1))
+    
+    
+    trace1 = go.Scatter(
+        name='Laser Off',
+        x=df['Time'],
+        y=df['Laser Off'],
+        hovertemplate=hovertemp,        
+        mode='lines',
+        line=dict(color='rgb(31, 119, 180)'))
+    
+
+    trace3 = go.Scatter(
+        name='Laser Off Fit',
+        x=df['Time'],
+        y=loff_func(df['Time'],*[df2.loc[run]['Loff A'], df2.loc[run]['Loff B'], df2.loc[run]['Loff g']]),
+        hovertemplate=hovertemp,        
+        mode='lines',
+        line=dict(color='rgb(255, 0, 0)'))
+    
+    if len(cols) > 0:
         trace2e = go.Scatter(
             name='Laser On',
             x=df['Time'],
@@ -225,14 +251,6 @@ def asym_plots(df, run, df2, plots):
                 color='darkgray',
                 thickness=1))
         
-        trace1 = go.Scatter(
-            name='Laser Off',
-            x=df['Time'],
-            y=df['Laser Off'],
-            hovertemplate=hovertemp,        
-            mode='lines',
-            line=dict(color='rgb(31, 119, 180)'))
-        
         trace2 = go.Scatter(
             name='Laser On',
             x=df['Time'],
@@ -240,14 +258,6 @@ def asym_plots(df, run, df2, plots):
             hovertemplate=hovertemp,        
             mode='lines',
             line=dict(color='rgb(0, 255, 35)'))
-    
-        trace3 = go.Scatter(
-            name='Laser Off Fit',
-            x=df['Time'],
-            y=loff_func(df['Time'],*[df2.loc[run]['Loff A'], df2.loc[run]['Loff B'], df2.loc[run]['Loff g']]),
-            hovertemplate=hovertemp,        
-            mode='lines',
-            line=dict(color='rgb(255, 0, 0)'))
     
         data = []
         if len(plots) == 0:
@@ -274,37 +284,8 @@ def asym_plots(df, run, df2, plots):
                 data = [trace1e, trace2e]            
         elif len(plots) == 3:
             data = [trace1e, trace2e, trace3]
-    except:
-        trace1e = go.Scatter(
-            name='Laser Off',
-            x=df['Time'],
-            y=df['Laser Off'],
-            hovertemplate=hovertemp,
-            mode='lines',
-            line=dict(color='rgb(31, 119, 255)'),
-            error_y=dict(
-                type='data',
-                array=df['Laser Off Err'],
-                visible=True,
-                color='darkgray',
-                thickness=1))
-        
-        trace1 = go.Scatter(
-            name='Laser Off',
-            x=df['Time'],
-            y=df['Laser Off'],
-            hovertemplate=hovertemp,        
-            mode='lines',
-            line=dict(color='rgb(31, 119, 180)'))
-    
-        trace3 = go.Scatter(
-            name='Laser Off Fit',
-            x=df['Time'],
-            y=loff_func(df['Time'],*[df2.loc[run]['Loff A'], df2.loc[run]['Loff B'], df2.loc[run]['Loff g']]),
-            hovertemplate=hovertemp,        
-            mode='lines',
-            line=dict(color='rgb(255, 0, 0)'))   
-        
+            
+    else:          
         data = []
         if len(plots) == 0:
             data = [trace1]
@@ -331,6 +312,7 @@ def asym_plots(df, run, df2, plots):
         elif len(plots) == 3:
             data = [trace1e, trace3]
         
+    
         
 #create layout of plot    
     layout = go.Layout(
@@ -358,7 +340,78 @@ def asym_plots(df, run, df2, plots):
     fig = go.Figure(data=data, layout=layout)
     return fig
 
+def build_table(run):
+    tempave = tempdata[run]['Temp(K)'].mean()
+    tempaverr = tempdata[run]['Temp(K)'].sem(axis=0)
+    row1 = html.Tr([html.Td("# Of Events (Mev)"), html.Td(fitdata.loc[run]['Raw Events(MeV)'])])
+    if tempave > 0:
+        row2 = html.Tr([html.Td("Signal (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[run]['Asym Diff'], abs(fitdata.loc[run]['Asym Diff Err'])))])
+        row3 = html.Tr([html.Td("Asym Drop (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[run]['Power Drop']*100, abs(fitdata.loc[run]['Power Drop Err']*100)))])
+        row4 = html.Tr([html.Td("Temp Ave (K)"), html.Td('%5.3f +- %5.5f' %(tempave, tempaverr))])
+    else:
+        row2 = html.Tr([html.Td("Signal (%)"), html.Td('No Laser Data')])
+        row3 = html.Tr([html.Td("Asym Drop (%)"), html.Td('No Laser Data')])
+        row4 = html.Tr([html.Td("Temp Ave (K)"), html.Td("No Temp Data")])
+    table_body = [html.Tbody([row1, row2, row3, row4])]
+    return table_body
 
+def lsat_plot(laser_sat, laser_sat_data):
+    hovertemp ='<B>Power(mJ)</B>: %{x}'+'<br><b>Asym Red</b>: %{y}<extra></extra>'
+    
+    trace1 = go.Scatter(
+        name='Data',
+        x=laser_sat_data['Ps(mJ/Pulse)'],
+        y=laser_sat_data['(Lon-Loff)/Loff'],
+        hovertemplate=hovertemp,
+        mode='markers',
+        line=dict(color='rgb(255, 0, 0)'),
+        error_y=dict(
+            type='data',
+            array=laser_sat_data['err.2'],
+            visible=True,
+            color='darkgray',
+            thickness=1))  
+    
+    trace2 = go.Scatter(
+        name='Fit',
+        x=laser_sat['Power'],
+        y=laser_sat['Asym Red'],
+        hovertemplate=hovertemp,        
+        mode='lines',
+        line=dict(color='rgb(255, 0, 255)'))
+    
+    data = [trace1, trace2]
+        
+#create layout of plot    
+    layout = go.Layout(
+        xaxis=dict(title='Power(mJ/Pulse)',
+            ticks='outside',
+            showline=True,            
+            linecolor='rgb(0,0,0)'),
+        yaxis=dict(title='Asym Red(%)',
+            mirror=True,
+            ticks='outside',
+            showline=True,
+            linecolor='rgb(0,0,0)'),
+        width=800,
+        height=600,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hoverlabel_align = 'left',
+        plot_bgcolor='rgb(255,255,255)',        
+        showlegend = True)
+    
+    fig = go.Figure(data=data, layout=layout)    
+    
+    
+    return fig
+
+    
 ###############################################################################
 #Setup data to be displayed
 ###############################################################################
@@ -403,6 +456,10 @@ repolfitdata = pd.read_csv(directory+'repolfitdata.csv', index_col=0)
 repol = repol_plot(repolarization, repolfitdata)
 lam = lam_plot(repolarization, repolfitdata)
 
+#Build Laser Saturation Curve
+laser_sat = pd.read_csv(directory+'laserpowerred.csv')
+laser_sat_data = pd.read_csv(directory+'powerredvslaserpower.csv')
+lsat = lsat_plot(laser_sat, laser_sat_data)
                     
 ###############################################################################
 #Build Dash App
@@ -413,15 +470,17 @@ table_header = [
 ]
 tempave = tempdata[filenames[0]]['Temp(K)'].mean()
 tempaverr = tempdata[filenames[0]]['Temp(K)'].sem(axis=0)
-row1 = html.Tr([html.Td("# Of Events (Mev)"), html.Td(fitdata.loc[filenames[0]]['Raw Events(MeV)'])])
-row2 = html.Tr([html.Td("Signal (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[filenames[0]]['Asym Diff'], abs(fitdata.loc[filenames[0]]['Asym Diff Err'])))])
-row3 = html.Tr([html.Td("Asym Drop (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[filenames[0]]['Power Drop']*100, abs(fitdata.loc[filenames[0]]['Power Drop Err']*100)))])
-row4 = html.Tr([html.Td("Temp Ave (K)"), html.Td('%5.3f +- %5.5f' %(tempave, tempaverr))])
-table_body = html.Tbody([row1, row2, row3, row4])
+table_body = build_table(filenames[0])
 
 #create text for drop down list (file, wavelength, B-Field)
-fitdata['Names'] = fitdata.index.astype(str)+", "+fitdata['Wavelength(nm)'].astype(str) +", "+ fitdata['B-Field(G)'].astype(str)
+wavelengths = fitdata['Wavelength(nm)'].values.astype(str)
+for i in range(len(wavelengths)):
+    if wavelengths[i] == 'nan':
+        wavelengths[i] = 'No Laser'
 
+
+fitdata['Names'] = fitdata.index.astype(str)+", "+wavelengths+", "+ fitdata['B-Field(G)'].astype(str)
+#fitdata['Names'] = fitdata.index.astype(str)+", "+fitdata['Wavelength(nm)'].astype(str)+", "+ fitdata['B-Field(G)'].astype(str)
 
 # Build App
 stylesheet = 'https://stackpath.bootstrapcdn.com/bootswatch/4.5.0/cerulean/bootstrap.min.css'
@@ -473,6 +532,9 @@ app.layout = dbc.Container([
     html.H2("Repolarization Plots"),
     dcc.Graph(figure=repol),
     dcc.Graph(figure=lam),
+    html.Hr(),
+    html.H2("Laser Saturation Curve"),
+    dcc.Graph(figure=lsat),    
 ])
 
 # Define callbacks to update graph
@@ -495,15 +557,8 @@ def update_figure(tempdata_value, plots):
     [Input("wavelength-dropdown","value")],    
 )
 def update_table(wavelength):
-    run = int(wavelength[0:6])
-    tempave = tempdata[run]['Temp(K)'].mean()
-    tempaverr = tempdata[run]['Temp(K)'].sem(axis=0)
-    row1 = html.Tr([html.Td("# Of Events (Mev)"), html.Td(fitdata.loc[run]['Raw Events(MeV)'])])
-    row2 = html.Tr([html.Td("Signal (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[run]['Asym Diff'], abs(fitdata.loc[run]['Asym Diff Err'])))])
-    row3 = html.Tr([html.Td("Asym Drop (%)"), html.Td('%5.5f +- %5.5f' %(fitdata.loc[run]['Power Drop']*100, abs(fitdata.loc[run]['Power Drop Err']*100)))])
-    row4 = html.Tr([html.Td("Temp Ave (K)"), html.Td('%5.3f +- %5.5f' %(tempave, tempaverr))])
-    
-    table_body = [html.Tbody([row1, row2, row3, row4])]
+    run = int(wavelength[0:6])    
+    table_body = build_table(run)
     return table_body
     
 if __name__ == '__main__':    
