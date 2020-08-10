@@ -421,6 +421,8 @@ directory="https://raw.githubusercontent.com/inelastic/Dec-2016-App/master/Proce
 filenames = filenames = pd.read_csv(directory+'listfile.txt', names=['Name'])
 filenames.drop(filenames.tail(1).index,inplace=True)
 filenames = filenames['Name'].values
+filenames = filenames.astype(int)
+
 
 fitdata = pd.read_csv(directory+'fitdata.csv', index_col=0)
 
