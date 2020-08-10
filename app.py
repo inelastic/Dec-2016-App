@@ -416,8 +416,8 @@ def lsat_plot(laser_sat, laser_sat_data):
 #Setup data to be displayed
 ###############################################################################
 #setting the directory and grabbing the filenames
-#directory="https://raw.githubusercontent.com/inelastic/Dec-2016-app/master/ProcessedCSV/"
-directory="E:/Storage/Documents/Python Files/RALAnalysis/Dec2016/ProcessedCSV/"
+directory="https://raw.githubusercontent.com/inelastic/Dec-2016-app/master/ProcessedCSV/"
+#directory="E:/Storage/Documents/Python Files/RALAnalysis/Dec2016/ProcessedCSV/"
 filenames = []
 with open(directory+'listfile.txt', 'r') as filehandle:
     filenames = [current_place.rstrip() for current_place in filehandle.readlines()]
